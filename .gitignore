@@ -1,0 +1,6 @@
+.history
+.env
+searchdata/
+pgdata/
+nginx/
+moodledata/
