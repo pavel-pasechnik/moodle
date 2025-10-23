@@ -8,7 +8,6 @@
 ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571?logo=elasticsearch&logoColor=white)
 ![Moodle](https://img.shields.io/badge/Moodle-4.5.7+-F98012?logo=moodle&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
-![Build Status](https://github.com/pavel-pasechnik/moodle/actions/workflows/docker-build.yml/badge.svg?branch=main)
 
 ---
 
@@ -126,17 +125,6 @@ docker compose -f docker-compose.prod-ext.yml up -d --build
 - Skips local PostgreSQL container.
 - Reads database credentials from `.env` (`EXTERNAL_DB_*` variables).
 - Ideal for cloud or multi-server setups.
-
----
-
-## CI/CD Automation
-
-This repository includes GitHub Actions:
-
-| Workflow         | File                                 | Purpose                               |
-| ---------------- | ------------------------------------ | ------------------------------------- |
-| **Docker Build** | `.github/workflows/docker-build.yml` | Build and publish Moodle Docker image |
-| **Lint & QA**    | `.github/workflows/lint.yml`         | Code and configuration quality checks |
 
 ---
 
