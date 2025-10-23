@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16.4
+    image: postgres:16
     restart: always
     environment:
       POSTGRES_DB: ${MOODLE_DBNAME}
@@ -31,14 +31,13 @@ services:
     entrypoint: ["/usr/local/bin/setup.sh"]
     restart: always
     depends_on:
-      - postgres
       - redis
       - elasticsearch
     ports:
       - "8080:80"
     environment:
       MOODLE_DBTYPE: pgsql
-      MOODLE_DBHOST: postgres
+      MOODLE_DBHOST: ${MOODLE_DBHOST:-postgres}
       MOODLE_DBNAME: ${MOODLE_DBNAME}
       MOODLE_DBUSER: ${MOODLE_DBUSER}
       MOODLE_DBPASS: ${MOODLE_DBPASS}
@@ -49,7 +48,7 @@ services:
       MOODLE_URL: http://localhost:8080
     volumes:
       - ./config/php.ini:/usr/local/etc/php/php.ini:ro
-      - ./scripts/setup.sh:/usr/local/bin/setup.sh:ro
+      - ./scripts/setup.sh:/usr/local/bin/setup.sh
     dns:
       - 8.8.8.8
       - 1.1.1.1

@@ -1,0 +1,25 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    container_name: redis-prod-ext
+
+  moodle:
+    image: ghcr.io/pavel-pasechnik/moodle:latest
+    container_name: moodle-prod-ext
+    restart: unless-stopped
+    depends_on:
+      - redis
+    ports:
+      - "80:80"
+    environment:
+      MOODLE_DBTYPE: pgsql
+      MOODLE_DBHOST: ${MOODLE_DBHOST}
+      MOODLE_DBPORT: ${MOODLE_DBPORT}
+      MOODLE_DBNAME: ${MOODLE_DBNAME}
+      MOODLE_DBUSER: ${MOODLE_DBUSER}
+      MOODLE_DBPASS: ${MOODLE_DBPASS}
+      REDIS_HOST: redis
+      MOODLE_URL: ${MOODLE_URL}
+    volumes:
+      - /srv/moodle/moodledata:/var/moodledata
