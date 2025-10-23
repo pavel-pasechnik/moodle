@@ -90,15 +90,17 @@ wait_for_db "$DBTYPE" "$DBHOST" "$DBUSER" "$DBPASS" "$DBNAME"
 
 # Check if Moodle database is already initialized
 if [ "$DBTYPE" = "pgsql" ]; then
-  DB_CHECK=$(PGPASSWORD="$DBPASS" psql -h "$DBHOST" -U "$DBUSER" -d "$DBNAME" -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='config';" || echo "0")
+  DB_CHECK=$(PGPASSWORD="$DBPASS" psql -h "$DBHOST" -U "$DBUSER" -d "$DBNAME" -tAc \
+    "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='config';" 2>/dev/null || echo "0")
 elif [ "$DBTYPE" = "mysqli" ]; then
-  DB_CHECK=$(mysql -h "$DBHOST" -u "$DBUSER" -p"$DBPASS" -D "$DBNAME" -se "SHOW TABLES LIKE 'config';" | grep -c config || echo "0")
+  DB_CHECK=$(mysql -h "$DBHOST" -u "$DBUSER" -p"$DBPASS" -D "$DBNAME" -se \
+    "SHOW TABLES LIKE 'config';" 2>/dev/null | grep -c config || echo "0")
 else
   echo "Unsupported DBTYPE: $DBTYPE"
   exit 1
 fi
 
-if [ "$DB_CHECK" = "1" ]; then
+if [ "$DB_CHECK" != "0" ]; then
   echo "✅ Moodle database already initialized, skipping installation and admin setup."
   SKIP_INSTALL=true
 else

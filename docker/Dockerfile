@@ -6,9 +6,8 @@ LABEL maintainer="Pavel Pasechnik <Pavel.Pasechnik@gmail.com>" \
 
 ARG MOODLE_VERSION=MOODLE_405_STABLE
 ARG GIT_BRANCH=main
-ARG BUILD_MODE=prod
 ENV DEBIAN_FRONTEND=noninteractive \
-    TZ=Europe/Kiev
+    TZ=${TZ:-Europe/Kiev}
 
 # --- System deps & PHP extensions ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
