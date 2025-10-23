@@ -1,3 +1,4 @@
+---
 name: 🏗 Docker Build and Push
 
 on:
@@ -25,8 +26,8 @@ jobs:
 
       - name: Verify Dockerfile
         run: |
-          if [ ! -f ./Docker/Dockerfile ]; then
-            echo "❌ Dockerfile not found in ./Docker"
+          if [ ! -f ./docker/Dockerfile ]; then
+            echo "❌ Dockerfile not found in ./docker"
             exit 1
           fi
           echo "✅ Dockerfile found."

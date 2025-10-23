@@ -8,7 +8,7 @@
 ![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571?logo=elasticsearch&logoColor=white)
 ![Moodle](https://img.shields.io/badge/Moodle-4.5.7+-F98012?logo=moodle&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
-![Build Status](https://github.com/pavel-pasechnik/moodle-docker/actions/workflows/docker-build.yml/badge.svg)
+![Build Status](https://github.com/pavel-pasechnik/moodle/actions/workflows/docker-build.yml/badge.svg?branch=main)
 
 ---
 
