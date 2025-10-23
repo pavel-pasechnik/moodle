@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${MOODLE_DBUSER}
       POSTGRES_PASSWORD: ${MOODLE_DBPASS}
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -21,8 +21,6 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    volumes:
-      - ./searchdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
 
@@ -44,10 +42,17 @@ services:
       MOODLE_DBNAME: ${MOODLE_DBNAME}
       MOODLE_DBUSER: ${MOODLE_DBUSER}
       MOODLE_DBPASS: ${MOODLE_DBPASS}
-      MOODLE_REDIS_HOST: ${REDIS_HOST}
-      MOODLE_ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
-      MOODLE_CACHE_STORE: redis
+      REDIS_HOST: redis
+      ELASTICSEARCH_HOST: elasticsearch
       MOODLE_VERSION: 4.5.7
+      TZ: Europe/Kiev
+      MOODLE_URL: http://localhost:8080
     volumes:
-      - ./moodledata:/var/moodledata
-      - ./scripts:/usr/local/bin
+      - ./config/php.ini:/usr/local/etc/php/php.ini:ro
+      - ./scripts/setup.sh:/usr/local/bin/setup.sh:ro
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+volumes:
+  pgdata:

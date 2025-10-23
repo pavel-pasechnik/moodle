@@ -1,0 +1,90 @@
+# Moodle 4.5.7+ Docker Stack
+
+![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
+![Apache](https://img.shields.io/badge/Apache-2.4-D22128?logo=apache&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.4-336791?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?logo=redis&logoColor=white)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571?logo=elasticsearch&logoColor=white)
+![Moodle](https://img.shields.io/badge/Moodle-4.5.7+-F98012?logo=moodle&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![Build Status](https://github.com/pavel-pasechnik/moodle-docker/actions/workflows/docker-build.yml/badge.svg)
+![Plugin CI](https://github.com/pavel-pasechnik/moodle-docker/actions/workflows/moodle-plugin-ci.yml/badge.svg)
+
+---
+
+## Description
+
+Fully automated Docker image for **Moodle 4.5.7+**,  
+including optimizations for PHP, Redis, PostgreSQL, Elasticsearch,  
+and external plugins installed during the image build.
+
+---
+
+## Image Components
+
+| Component         |     Version     | Purpose                                                                                     |
+| ----------------- | :-------------: | ------------------------------------------------------------------------------------------- |
+| **PHP**           |       8.3       | Web interpreter with support for `gd`, `intl`, `soap`, `redis`, `pgsql`, `pdo_pgsql`, `zip` |
+| **Apache**        |       2.4       | HTTP server for Moodle                                                                      |
+| **PostgreSQL**    |      16.4       | Primary database                                                                            |
+| **Redis**         |       7.2       | Cache and session manager                                                                   |
+| **Elasticsearch** |      8.15       | Full-text search for Moodle                                                                 |
+| **Moodle**        |     4.5.7+      | Core LMS                                                                                    |
+| **OS**            | Debian Bookworm | Base PHP-Apache image                                                                       |
+
+---
+
+## PHP Optimizations
+
+| Parameter              | Value | Description                        |
+| ---------------------- | :---: | ---------------------------------- |
+| `max_input_vars`       | 5000  | Moodle requirement for large forms |
+| `memory_limit`         | 512M  | Optimal value for courses          |
+| `upload_max_filesize`  |  50M  | Maximum upload file size           |
+| `opcache.enable`       |   1   | Speeds up PHP page loading         |
+| `session.save_handler` | redis | Sessions via Redis                 |
+| `redis.host`           | redis | Caching                            |
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/pavel-pasechnik/moodle-docker.git
+cd moodle-docker
+cp .env.example .env
+docker compose up -d --build
+```
+
+After installation, Moodle is available at:  
+👉 [http://localhost:8080](http://localhost:8080)
+
+---
+
+## Automatically Installed Plugins
+
+| Plugin                 | Repository                                                                                                      | Purpose                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Course Certificate** | [moodleworkplace/moodle-mod_coursecertificate](https://github.com/moodleworkplace/moodle-mod_coursecertificate) | Course certificates                  |
+| **Autonumber**         | [pavel-pasechnik/autonumber](https://github.com/pavel-pasechnik/autonumber)                                     | Automatic numbering for certificates |
+
+---
+
+## CI/CD Automation
+
+This repository includes GitHub Actions:
+
+| Workflow         | File                                     | Purpose                               |
+| ---------------- | ---------------------------------------- | ------------------------------------- |
+| **Docker Build** | `.github/workflows/docker-build.yml`     | Build and publish Moodle Docker image |
+| **Plugin CI**    | `.github/workflows/moodle-plugin-ci.yml` | Testing external Moodle plugins       |
+| **Lint & QA**    | `.github/workflows/lint.yml`             | Code and configuration quality checks |
+
+---
+
+## Support
+
+Developed for Krishna Academy projects and academic Moodle installations.  
+Author: [Pavel Pasechnik](https://github.com/pavel-pasechnik)  
+License: MIT

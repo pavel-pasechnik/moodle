@@ -1,5 +1,16 @@
 #!/bin/bash
+
+
 set -e
+set -o pipefail
+export PATH=$PATH:/usr/local/bin
+
+ssh -T git@github.com || echo "⚠️  SSH GitHub check failed, but continuing..."
+
+# Remove unsupported options from SSH config (if macOS ~/.ssh/config is mounted)
+if [ -f /root/.ssh/config ] && grep -q "UseKeychain" /root/.ssh/config; then
+  sed -i '/UseKeychain/d' /root/.ssh/config
+fi
 
 echo "=== Moodle Setup Script ==="
 
@@ -12,7 +23,7 @@ done
 # Checking if Moodle is installed
 if [ ! -f /var/www/html/config.php ]; then
   echo "Generating Moodle config.php..."
-  php admin/cli/install.php \
+  /usr/local/bin/php admin/cli/install.php \
     --chmod=2777 \
     --lang=ru \
     --wwwroot=${MOODLE_URL:-http://localhost:8080} \
@@ -33,26 +44,33 @@ else
   echo "Moodle already installed, skipping install.php"
 fi
 
+if ssh -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+  echo "SSH connection to GitHub verified."
+else
+  echo "⚠️  Warning: GitHub SSH authentication failed. Plugins may not clone."
+fi
+
 # Installing the Course Certificate plugin
 if [ ! -d /var/www/html/mod/coursecertificate ]; then
   echo "Installing Course Certificate plugin..."
-  git clone https://github.com/moodle/moodle-mod_coursecertificate.git /var/www/html/mod/coursecertificate
+  git clone --branch MOODLE_400_STABLE --depth 1 https://github.com/moodleworkplace/moodle-mod_coursecertificate.git /var/www/html/mod/coursecertificate
   chown -R www-data:www-data /var/www/html/mod/coursecertificate
 else
   echo "Course Certificate plugin already installed."
 fi
 
-# Installing the Cloudflare plugin
-if [ ! -d /var/www/html/local/cloudflare ]; then
-  echo "Installing Cloudflare plugin..."
-  git clone https://github.com/moodlehq/moodle-local_cloudflare.git /var/www/html/local/cloudflare
-  chown -R www-data:www-data /var/www/html/local/cloudflare
+
+# Installing the Autonumber plugin
+if [ ! -d /var/www/html/local/autonumber ]; then
+  echo "Installing Autonumber plugin..."
+  git clone https://github.com/pavel-pasechnik/autonumber.git /var/www/html/local/autonumber
+  chown -R www-data:www-data /var/www/html/local/autonumber
 else
-  echo "Cloudflare plugin already installed."
+  echo "Autonumber plugin already installed."
 fi
 
 # Add Redis and Elasticsearch settings if not specified
-if ! grep -q "redis" /var/www/html/config.php; then
+if [ -f /var/www/html/config.php ] && ! grep -q "redis" /var/www/html/config.php; then
   echo "Configuring Redis and search engine..."
   cat <<'EOCFG' >> /var/www/html/config.php
 
@@ -61,6 +79,7 @@ if ! grep -q "redis" /var/www/html/config.php; then
 \$CFG->session_redis_host = '${REDIS_HOST:-redis}';
 \$CFG->session_redis_port = ${REDIS_PORT:-6379};
 \$CFG->cache_store_redis = 'redis';
+\$CFG->cachestore_redis = true;
 \$CFG->lock_factory = '\core\lock\redis_lock_factory';
 
 // Global Search setup
@@ -70,13 +89,14 @@ if ! grep -q "redis" /var/www/html/config.php; then
 EOCFG
 fi
 
-# Moodle update
-echo "Running Moodle upgrade..."
-php admin/cli/upgrade.php --non-interactive
+if [ -f /var/www/html/config.php ]; then
+  echo "Running Moodle upgrade..."
+  /usr/local/bin/php admin/cli/upgrade.php --non-interactive
+fi
 
 # Setup straight
 chown -R www-data:www-data /var/www/html /var/moodledata
 chmod -R 755 /var/moodledata
 
 echo "=== Moodle setup complete ==="
-apache2-foreground
+exec apache2-foreground

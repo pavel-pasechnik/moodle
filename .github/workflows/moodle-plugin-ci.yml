@@ -1,0 +1,69 @@
+name: 🧩 Test Moodle Plugin
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PATH: ${{ github.workspace }}/ci/bin:/usr/local/bin:/usr/bin:/bin
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: moodle
+          POSTGRES_PASSWORD: moodle
+          POSTGRES_DB: moodle
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U moodle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          ini-values: max_input_vars=5000
+          extensions: pgsql, mysqli, zip, intl, gd, curl, xmlrpc, soap
+          coverage: none
+
+      - name: Install Moodle Plugin CI
+        run: composer create-project -n --no-dev moodlehq/moodle-plugin-ci ci ^4
+
+      - name: Configure locale
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y locales
+          sudo locale-gen en_AU.UTF-8
+          sudo update-locale LANG=en_AU.UTF-8
+
+      - name: Set up Moodle Plugin CI
+        env:
+          PGPASSWORD: moodle
+        run: |
+          export PATH="$(pwd)/ci/bin:$PATH"
+          psql -U moodle -h localhost -d postgres -c 'DROP DATABASE IF EXISTS moodle;'
+          moodle-plugin-ci install --db-type=pgsql --db-user=moodle --db-pass=moodle --db-name=moodle --branch=main --no-init
+
+      - name: Initialise PHPUnit environment
+        run: |
+          php moodle/public/admin/tool/phpunit/cli/init.php
+
+      - name: Run PHPCS (Code style)
+        run: moodle-plugin-ci phpcs || true
+
+      - name: Run PHPUnit
+        run: moodle-plugin-ci phpunit
