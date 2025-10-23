@@ -8,7 +8,13 @@
 
 set -e
 set -o pipefail
+
 export PATH=$PATH:/usr/local/bin
+
+# Load environment variables from .env if present
+if [ -f ".env" ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
 
 
 echo "=== Moodle Setup Script ==="
@@ -36,29 +42,16 @@ else
     fi
   fi
 
-  ENV_MODE=${ENV_MODE:-dev}
-
   if [ "$POSTGRES_HOST_DETECTED" = true ]; then
-    if [ "$ENV_MODE" = "prod" ]; then
-      MODE="prod"
-    else
-      MODE="dev"
-    fi
-    DBUSER=${MOODLE_DBUSER:-moodleuser}
-    DBPASS=${MOODLE_DBPASS:-StrongPassword123}
-    DBNAME=${MOODLE_DBNAME:-moodle}
-    DBTYPE=${MOODLE_DBTYPE:-pgsql}
-    echo "Detected deployment mode: $MODE (internal DB host: $DBHOST)"
-  else
-    # Fallback to dev mode with defaults
     MODE="dev"
-    DBHOST=${MOODLE_DBHOST:-postgres}
-    DBUSER=${MOODLE_DBUSER:-moodleuser}
-    DBPASS=${MOODLE_DBPASS:-StrongPassword123}
-    DBNAME=${MOODLE_DBNAME:-moodle}
-    DBTYPE=${MOODLE_DBTYPE:-pgsql}
-    echo "Detected deployment mode: $MODE (default internal DB host: $DBHOST)"
+  else
+    MODE="dev"
   fi
+  DBUSER=${MOODLE_DBUSER:-moodleuser}
+  DBPASS=${MOODLE_DBPASS:-StrongPassword123}
+  DBNAME=${MOODLE_DBNAME:-moodle}
+  DBTYPE=${MOODLE_DBTYPE:-pgsql}
+  echo "Detected deployment mode: $MODE (internal DB host: $DBHOST)"
 fi
 
 # Waiting for the database to start (PostgreSQL or MySQL)
@@ -91,26 +84,25 @@ wait_for_db "$DBTYPE" "$DBHOST" "$DBUSER" "$DBPASS" "$DBNAME"
 # Check if Moodle database is already initialized
 if [ "$DBTYPE" = "pgsql" ]; then
   DB_CHECK=$(PGPASSWORD="$DBPASS" psql -h "$DBHOST" -U "$DBUSER" -d "$DBNAME" -tAc \
-    "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='config';" 2>/dev/null || echo "0")
+    "SELECT COUNT(*) FROM pg_tables WHERE schemaname='public';" 2>/dev/null || echo "0")
 elif [ "$DBTYPE" = "mysqli" ]; then
   DB_CHECK=$(mysql -h "$DBHOST" -u "$DBUSER" -p"$DBPASS" -D "$DBNAME" -se \
-    "SHOW TABLES LIKE 'config';" 2>/dev/null | grep -c config || echo "0")
+    "SHOW TABLES;" 2>/dev/null | wc -l || echo "0")
 else
   echo "Unsupported DBTYPE: $DBTYPE"
   exit 1
 fi
 
-if [ "$DB_CHECK" != "0" ]; then
+if [ "$DB_CHECK" -lt 10 ]; then
+  echo "⚠️  Moodle database appears empty — proceeding with fresh installation."
+  SKIP_INSTALL=false
+else
   echo "✅ Moodle database already initialized, skipping installation and admin setup."
   SKIP_INSTALL=true
-else
-  echo "⚠️  Moodle database appears empty — proceeding with fresh installation."
-  rm -f /var/www/html/config.php 2>/dev/null || true
-  SKIP_INSTALL=false
 fi
 
 # Installing Moodle if not initialized
-if [ "$SKIP_INSTALL" = false ] && [ ! -f /var/www/html/config.php ]; then
+if [ "$SKIP_INSTALL" = false ]; then
   if [ -f /var/www/html/install.php ] || [ -f /var/www/html/admin/cli/install.php ]; then
     echo "Installing fresh Moodle instance..."
     /usr/local/bin/php $( [ -f /var/www/html/admin/cli/install.php ] && echo "/var/www/html/admin/cli/install.php" || echo "/var/www/html/install.php" ) \
@@ -125,9 +117,9 @@ if [ "$SKIP_INSTALL" = false ] && [ ! -f /var/www/html/config.php ]; then
       --dbpass=$DBPASS \
       --fullname="Moodle 4.5.7 Test" \
       --shortname="Moodle" \
-      --adminuser=admin \
-      --adminpass=Admin@12345 \
-      --adminemail=admin@example.com \
+      --adminuser=${MOODLE_ADMIN_USER:-admin} \
+      --adminpass=${MOODLE_ADMIN_PASS:-Admin@12345} \
+      --adminemail=${MOODLE_ADMIN_EMAIL:-admin@example.com} \
       --non-interactive \
       --agree-license
   else
@@ -141,21 +133,72 @@ fi
 
 # Universal plugin cloning function
 clone_plugin() {
-  local repo_https="$2"
-  local dest_dir="$3"
+  local repo_url="$1"
+  local dest_dir="$2"
 
   echo "Cloning plugin to $dest_dir..."
-
-  # Clone via HTTPS only
-  if git clone --depth 1 "$repo_https" "$dest_dir"; then
-    echo "✅ Cloned via HTTPS: $repo_https"
+  if git clone --depth 1 "$repo_url" "$dest_dir"; then
+    echo "✅ Cloned via HTTPS: $repo_url"
     return 0
   else
-    echo "❌ Failed to clone plugin: $repo_https"
+    echo "❌ Failed to clone plugin: $repo_url"
     return 1
   fi
 }
 
+
+clone_with_fallback() {
+  local repo="$1"
+  local dest="$2"
+  echo "Cloning $repo..."
+
+  # Извлекаем major версию из MOODLE_VERSION (например, 4)
+  major_version=$(echo "${MOODLE_VERSION:-4.5.7}" | cut -d'.' -f1)
+
+  # Попытка определить доступную ветку Moodle X.xx_STABLE
+  branch=$(git ls-remote --heads "$repo" | grep -Eo "refs/heads/MOODLE_${major_version}[0-9]{2}_STABLE" | sort -r | head -n1 | sed 's|refs/heads/||')
+
+  # Если ничего не найдено — fallback на main или master
+  if [ -z "$branch" ]; then
+    git ls-remote --heads "$repo" main &>/dev/null && branch="main" ||
+    git ls-remote --heads "$repo" master &>/dev/null && branch="master"
+  fi
+
+  echo "→ Using branch: ${branch:-unknown}"
+  git clone --branch="${branch:-main}" --depth=1 "$repo" "$dest" || echo "⚠️  Failed to clone $repo"
+}
+
+# === TOOL_CERTIFICATE and its dependencies ===
+echo "Installing tool_certificate and its dependencies..."
+
+# Основной плагин tool_certificate
+clone_with_fallback "https://github.com/moodleworkplace/moodle-tool_certificate.git" "/var/www/html/admin/tool/certificate" || true
+
+# Установка подплагинов certificateelement_*
+declare -a certificate_elements=(
+  "border"
+  "code"
+  "date"
+  "digitalsignature"
+  "image"
+  "program"
+  "text"
+  "userfield"
+  "userpicture"
+)
+
+for element in "${certificate_elements[@]}"; do
+  dir="/var/www/html/admin/tool/certificate/element/${element}"
+  repo="https://github.com/moodleworkplace/moodle-certificateelement_${element}.git"
+  if [ ! -d "$dir" ]; then
+    echo "Installing ${element}..."
+    clone_with_fallback "$repo" "$dir" || echo "⚠️  Failed to clone ${element}"
+  else
+    echo "${element} already exists."
+  fi
+done
+
+chown -R www-data:www-data /var/www/html/admin/tool/certificate
 
 # Installing or updating the Course Certificate plugin
 if [ -d /var/www/html/mod/coursecertificate ]; then
@@ -163,7 +206,7 @@ if [ -d /var/www/html/mod/coursecertificate ]; then
   cd /var/www/html/mod/coursecertificate && git pull || echo "⚠️  Failed to update Course Certificate plugin."
 else
   echo "Installing Course Certificate plugin..."
-  clone_plugin \
+  clone_with_fallback \
     "https://github.com/moodleworkplace/moodle-mod_coursecertificate.git" \
     "/var/www/html/mod/coursecertificate"
   chown -R www-data:www-data /var/www/html/mod/coursecertificate
@@ -184,30 +227,34 @@ else
 fi
 
 # Add Redis and Elasticsearch settings if not specified
-if [ -f /var/www/html/config.php ] && ! grep -q "redis" /var/www/html/config.php; then
+if [ -f /var/www/html/config.php ] && ! grep -q "redis_lock_factory" /var/www/html/config.php; then
   echo "Configuring Redis and search engine..."
-  REDIS_HOST=${REDIS_HOST:-redis}
-  REDIS_PORT=${REDIS_PORT:-6379}
-  ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-elasticsearch}
-  ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT:-9200}
 
+  # Append safe PHP config (no closing PHP tag, keep classes fully-qualified)
   cat <<EOCFG >> /var/www/html/config.php
 
-if (!defined('MOODLE_INTERNAL')) die();
+// === Redis sessions and optional locking ===
+// Sessions via Redis:
+\$CFG->session_handler_class = '\\\\core\\\\session\\\\redis';
+\$CFG->session_redis_host = getenv('REDIS_HOST') ?: 'redis';
+\$CFG->session_redis_port = (int) (getenv('REDIS_PORT') ?: 6379);
+\$CFG->session_redis_database = 0;
+\$CFG->session_redis_prefix = 'moodle_';
 
-\$CFG->session_handler_class = 'core\\session\\redis';
-\$CFG->session_redis_host = '${REDIS_HOST}';
-\$CFG->session_redis_port = ${REDIS_PORT};
-\$CFG->cache_store_redis = 'redis';
-\$CFG->cachestore_redis = true;
-\$CFG->lock_factory = 'core\\lock\\redis_lock';
+// Locking via Redis (only if the class exists in this Moodle version):
+if (class_exists('\\\\core\\\\lock\\\\redis_lock_factory')) {
+    \$CFG->lock_factory = '\\\\core\\\\lock\\\\redis_lock_factory';
+} else {
+    // Fallback to default locking (file/db) when Redis lock factory is not present.
+    // No explicit setting is required.
+}
 
-// Global Search setup
+// === Optional: Global Search via Elasticsearch ===
+// Comment out if not using Elasticsearch.
 \$CFG->searchengine = 'elasticsearch';
-\$CFG->search_elasticsearch_server = 'http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}';
+\$CFG->search_elasticsearch_server = 'http://' . (getenv('ELASTICSEARCH_HOST') ?: 'elasticsearch') . ':' . (getenv('ELASTICSEARCH_PORT') ?: '9200');
 \$CFG->search_elasticsearch_index = 'moodle_index';
 
-?>
 EOCFG
 fi
 
