@@ -3,9 +3,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${MOODLE_DBNAME}
-      POSTGRES_USER: ${MOODLE_DBUSER}
-      POSTGRES_PASSWORD: ${MOODLE_DBPASS}
+      POSTGRES_DB: ${MOODLE_DB_NAME}
+      POSTGRES_USER: ${MOODLE_DB_USER}
+      POSTGRES_PASSWORD: ${MOODLE_DB_PASS}
     volumes:
       - /srv/moodle/postgres:/var/lib/postgresql/data
 
@@ -23,12 +23,13 @@ services:
   environment:
     MOODLE_DBTYPE: pgsql
     MOODLE_DBHOST: postgres
-    MOODLE_DBNAME: ${MOODLE_DBNAME}
-    MOODLE_DBUSER: ${MOODLE_DBUSER}
-    MOODLE_DBPASS: ${MOODLE_DBPASS}
+    MOODLE_DBNAME: ${MOODLE_DB_NAME}
+    MOODLE_DBUSER: ${MOODLE_DB_USER}
+    MOODLE_DBPASS: ${MOODLE_DB_PASS}
     REDIS_HOST: redis
     MOODLE_URL: ${MOODLE_URL}
   ports:
     - "80:80"
   volumes:
     - /srv/moodle/moodledata:/var/moodledata
+    - ~/.ssh:/root/.ssh:ro

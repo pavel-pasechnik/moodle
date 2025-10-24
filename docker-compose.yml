@@ -3,9 +3,9 @@ services:
     image: postgres:16
     restart: always
     environment:
-      POSTGRES_DB: ${MOODLE_DBNAME}
-      POSTGRES_USER: ${MOODLE_DBUSER}
-      POSTGRES_PASSWORD: ${MOODLE_DBPASS}
+      POSTGRES_DB: ${MOODLE_DB_NAME}
+      POSTGRES_USER: ${MOODLE_DB_USER}
+      POSTGRES_PASSWORD: ${MOODLE_DB_PASS}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -37,16 +37,17 @@ services:
       - "8080:80"
     environment:
       MOODLE_DBTYPE: pgsql
-      MOODLE_DBHOST: ${MOODLE_DBHOST:-postgres}
-      MOODLE_DBNAME: ${MOODLE_DBNAME}
-      MOODLE_DBUSER: ${MOODLE_DBUSER}
-      MOODLE_DBPASS: ${MOODLE_DBPASS}
+      MOODLE_DBHOST: ${MOODLE_DB_HOST}
+      MOODLE_DBNAME: ${MOODLE_DB_NAME}
+      MOODLE_DBUSER: ${MOODLE_DB_USER}
+      MOODLE_DBPASS: ${MOODLE_DB_PASS}
       REDIS_HOST: redis
-      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
       MOODLE_VERSION: 4.5.7
-      TZ: Europe/Kiev
-      MOODLE_URL: http://localhost:8080
+      TZ: ${TZ}
+      MOODLE_URL: ${MOODLE_URL}
     volumes:
+      - ~/.ssh:/root/.ssh:ro
       - ./config/php.ini:/usr/local/etc/php/php.ini:ro
       - ./scripts/setup.sh:/usr/local/bin/setup.sh
     dns:

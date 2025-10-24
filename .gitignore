@@ -4,4 +4,4 @@ searchdata/
 pgdata/
 nginx/
 moodledata/
-backups/*
+moodle/
