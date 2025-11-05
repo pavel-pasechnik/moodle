@@ -69,6 +69,9 @@ while read -r repo; do
       dest="/var/www/html/blocks/${component#block_}"
   elif [[ "$component" == theme_* ]]; then
       dest="/var/www/html/theme/${component#theme_}"
+  elif [[ "$component" == certificateelement_* ]]; then
+      # Custom certificate element subplugins live under mod/customcert/element
+      dest="/var/www/html/admin/tool/certificate/element/${component#certificateelement_}"
   else
       echo "⚠️ Не удалось определить тип плагина ($component)"
       rm -rf "$tmpdir"

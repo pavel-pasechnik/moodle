@@ -101,7 +101,6 @@ if [ ! -f /var/www/html/config.php ]; then
       --agree-license
 fi
 
-echo "🧩 Installing plugins..."
 if [ -x /scripts/install_plugins.sh ]; then
   /scripts/install_plugins.sh
 else
@@ -152,7 +151,6 @@ if [ -f /var/www/html/config.php ]; then
   /usr/local/bin/php admin/cli/upgrade.php --non-interactive || echo "⚠️ Moodle upgrade failed"
   /usr/local/bin/php admin/cli/purge_caches.php || echo "⚠️ Cache purge failed"
 
-  
   cd /var/www/html
   /usr/local/bin/php admin/cli/cfg.php --name=theme --set=boost || true
   /usr/local/bin/php admin/cli/purge_caches.php || true
