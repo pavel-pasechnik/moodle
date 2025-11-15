@@ -10,10 +10,9 @@
 
 ## Available Tags
 
-- `pasechnik/moodle_lts_images:4.5.7-lts-fpm` — current FPM LTS (default)
-- `pasechnik/moodle_lts_images:5.0.3-fpm` — feature branch with public directory
-- `pasechnik/moodle_lts_images:5.1.0-fpm` — latest generation with `publicroot`
-All tags are built automatically via GitHub Actions.
+- `pasechnik/moodle_lts_optimized_images:latest` — universal build (contains all production optimizations)
+
+This tag is built automatically via GitHub Actions and always reflects the latest commit on `main`.
 
 ---
 
@@ -22,6 +21,12 @@ All tags are built automatically via GitHub Actions.
 Fully automated Docker image for **Moodle 4.5.7+**,  
 including optimizations for PHP, Redis, PostgreSQL, Elasticsearch,  
 and external plugins installed during the image build.
+
+---
+
+## Source Repository
+
+All Dockerfiles, scripts, and compose configurations for this stack live in [pavel-pasechnik/moodle](https://github.com/pavel-pasechnik/moodle).
 
 ---
 
@@ -92,19 +97,15 @@ After installation, Moodle is available at:
 docker run -d \
   --name moodle \
   -p 9000:9000 \
-  pasechnik/moodle_lts_images:4.5.7-lts-fpm
+  pasechnik/moodle_lts_optimized_images:latest
 ```
 
 ---
 
-## Choosing Moodle Versions
+## Selecting the Moodle Image Tag
 
-The Docker stack can launch multiple Moodle tracks without changing compose files.  
-Set `MOODLE_IMAGE` in `.env` to one of the published tags:
-
-- `pasechnik/moodle_lts_images:4.5.7-lts-fpm` — current FPM LTS (default)
-- `pasechnik/moodle_lts_images:5.0.3-fpm` — feature branch with public directory
-- `pasechnik/moodle_lts_images:5.1.0-fpm` — latest generation with `publicroot`
+The stack defaults to the universal `latest` tag.  
+Set `MOODLE_IMAGE` in `.env` if you need to test a different tag (e.g. a past release or custom build).
 
 `setup.sh` detects whether `public/` or `publicroot/` exists and keeps the `/var/www/html/public_web` symlink updated so Nginx always serves the supported docroot for that release.
 
@@ -112,12 +113,8 @@ Set `MOODLE_IMAGE` in `.env` to one of the published tags:
 
 ## Image Tags
 
-Pull the tag that matches the Moodle version you want to run:
-
 ```bash
-docker pull pasechnik/moodle_lts_images:4.5.7-lts-fpm   # current LTS
-docker pull pasechnik/moodle_lts_images:5.0.3-fpm       # Moodle 5.0 testing
-docker pull pasechnik/moodle_lts_images:5.1.0-fpm       # latest generation with /publicroot
+docker pull pasechnik/moodle_lts_optimized_images:latest
 ```
 
 ---
@@ -136,7 +133,7 @@ These directories are bind-mounted via `docker-compose.yml`, so they can also be
 ```yaml
 services:
   moodle:
-    image: pasechnik/moodle_lts_images:4.5.7-lts-fpm
+    image: pasechnik/moodle_lts_optimized_images:latest
     ports:
       - "80:8080"
     environment:
@@ -213,9 +210,12 @@ volumes:
 
 ## Automatically Installed Plugins
 
-| Plugin                 | Repository                                                                                                      | Purpose                              |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Course Certificate** | [moodleworkplace/moodle-mod_coursecertificate](https://github.com/moodleworkplace/moodle-mod_coursecertificate) | Course certificates                  |
-| **Autonumber**         | [pavel-pasechnik/autonumber](https://github.com/pavel-pasechnik/autonumber)                                     | Automatic numbering for certificates |
+| Plugin                             | Repository                                                                                                                                    | Purpose                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **Certificate Tool**               | [moodleworkplace/moodle-tool_certificate](https://github.com/moodleworkplace/moodle-tool_certificate/releases/tag/v4.5.7)                     | Provides the certificate framework + APIs        |
+| **Course Certificate**             | [moodleworkplace/moodle-mod_coursecertificate](https://github.com/moodleworkplace/moodle-mod_coursecertificate/releases/tag/v4.5.7)           | Adds the Course certificate activity type        |
+| **Certificate Autonumber Element** | [pavel-pasechnik/certificateelement_autonumber](https://github.com/pavel-pasechnik/certificateelement_autonumber/releases/tag/v1.0.15)        | Auto-generates unique certificate numbers        |
+| **Certificate "Certificat" Element** | [pavel-pasechnik/certificateelement_certificat](https://github.com/pavel-pasechnik/certificateelement_certificat/releases/tag/v1.0.4)         | Provides a branded visual element for templates  |
+| **Certificate Import (local)**     | [pavel-pasechnik/local_certificateimport](https://github.com/pavel-pasechnik/local_certificateimport/releases/tag/v1.0.13)                    | Imports certificate templates/settings from file |
 
 ---

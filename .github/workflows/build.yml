@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_IMAGE: ${{ vars.DOCKERHUB_IMAGE_HOST }}
+  DOCKER_IMAGE: pasechnik/moodle_lts_optimized_images
 
 jobs:
   build:
