@@ -19,7 +19,7 @@ echo "=== Installing Moodle plugins ==="
 command -v curl >/dev/null 2>&1 || { echo "❌ curl is not available in the image"; exit 1; }
 command -v unzip >/dev/null 2>&1 || { echo "❌ unzip is not available in the image"; exit 1; }
 
-while read -r repo; do
+while IFS= read -r repo || [[ -n "$repo" ]]; do
   [[ "$repo" =~ ^#.*$ || -z "$repo" ]] && continue
   repo_url=$(echo "$repo" | awk '{print $1}')
   echo "-----------------------------------------------"

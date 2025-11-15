@@ -2,34 +2,108 @@ services:
   postgres:
     image: postgres:16
     restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=${PG_SHARED_BUFFERS:-256MB}"
+      - "-c"
+      - "work_mem=${PG_WORK_MEM:-16MB}"
+      - "-c"
+      - "maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-256MB}"
+      - "-c"
+      - "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}"
+      - "-c"
+      - "max_connections=${PG_MAX_CONNECTIONS:-200}"
+      - "-c"
+      - "wal_buffers=${PG_WAL_BUFFERS:-16MB}"
     environment:
-      POSTGRES_DB: ${MOODLE_DB_NAME}
-      POSTGRES_USER: ${MOODLE_DB_USER}
-      POSTGRES_PASSWORD: ${MOODLE_DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - /srv/moodle/postgres:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command:
+      - "redis-server"
+      - "--save"
+      - ""
+      - "--appendonly"
+      - "${REDIS_APPENDONLY:-no}"
+      - "--maxmemory"
+      - "${REDIS_MAXMEMORY:-256mb}"
+      - "--maxmemory-policy"
+      - "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}"
+    volumes:
+      - /srv/moodle/redis:/data
 
   moodle:
-  image: ghcr.io/pavel-pasechnik/moodle:latest
-  container_name: moodle-prod
-  restart: unless-stopped
-  depends_on:
-    - postgres
-    - redis
-  environment:
-    MOODLE_DBTYPE: pgsql
-    MOODLE_DBHOST: postgres
-    MOODLE_DBNAME: ${MOODLE_DB_NAME}
-    MOODLE_DBUSER: ${MOODLE_DB_USER}
-    MOODLE_DBPASS: ${MOODLE_DB_PASS}
-    REDIS_HOST: redis
-    MOODLE_URL: ${MOODLE_URL}
-  ports:
-    - "80:80"
-  volumes:
-    - /srv/moodle/moodledata:/var/moodledata
-    - ~/.ssh:/root/.ssh:ro
+    image: ${MOODLE_IMAGE}
+    container_name: ${MOODLE_CONTAINER:-moodle}
+    platform: linux/amd64
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/setup.sh"]
+    depends_on:
+      - postgres
+      - redis
+    environment: &prod_moodle_env
+      DB_TYPE: ${DB_TYPE:-pgsql}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TZ: ${MOODLE_TZ:-Europe/Kyiv}
+      MOODLE_DOMAIN: ${MOODLE_DOMAIN}
+      MOODLE_URL: ${MOODLE_URL}
+      MOODLE_EXTRA_CONFIG_DIR: /config/moodle
+    volumes:
+      - /srv/moodle/html:/var/www/html
+      - /srv/moodle/moodledata:/var/moodledata
+      - ~/.ssh:/root/.ssh:ro
+      - ./config/php:/config/php:ro
+      - ./config/moodle:/config/moodle
+      - ./scripts:/scripts
+      - ./scripts/setup.sh:/usr/local/bin/setup.sh
+
+  cron:
+    image: ${MOODLE_IMAGE}
+    platform: linux/amd64
+    container_name: ${MOODLE_CONTAINER:-moodle}-cron
+    restart: unless-stopped
+    depends_on:
+      - moodle
+      - postgres
+      - redis
+    environment:
+      <<: *prod_moodle_env
+    volumes:
+      - /srv/moodle/html:/var/www/html
+      - /srv/moodle/moodledata:/var/moodledata
+      - ./config/php:/config/php:ro
+      - ./config/moodle:/config/moodle
+      - ./scripts:/scripts
+    entrypoint: ["/usr/local/bin/php","/scripts/run_cron.php"]
+
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    container_name: ${MOODLE_CONTAINER:-moodle}-nginx
+    depends_on:
+      - moodle
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MOODLE_DOMAIN: ${MOODLE_DOMAIN}
+    volumes:
+      - /srv/moodle/html:/var/www/html:ro
+      - /srv/moodle/moodledata:/var/moodledata:ro
+      - /srv/moodle/certs:/etc/nginx/certs:ro
+      - ./config/nginx/conf.d-https:/etc/nginx/conf.d
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro

@@ -1,7 +1,6 @@
 .history
 .env
-searchdata/
-pgdata/
-nginx/
-moodledata/
-moodle/
+# macOS Finder metadata
+.DS_Store
+.AppleDouble
+.LSOverride

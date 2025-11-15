@@ -1,20 +1,22 @@
-FROM php:8.3-apache
+FROM php:8.3-fpm
 
 LABEL maintainer="Pavel Pasechnik <Pavel.Pasechnik@gmail.com>" \
       org.opencontainers.image.source="https://github.com/pavel-pasechnik/moodle-docker" \
-      org.opencontainers.image.description="Moodle 4.5.x on PHP 8.3 + Apache with PostgreSQL client, Redis, SOAP, and build-time plugin bootstrap"
+      org.opencontainers.image.description="Moodle 4.5.x on PHP 8.3 FPM with PostgreSQL client, Redis, SOAP, and build-time plugin bootstrap"
 
-ARG MOODLE_VERSION=MOODLE_405_STABLE
 ARG GIT_BRANCH=main
+ARG TZ=Europe/Kyiv
 ENV DEBIAN_FRONTEND=noninteractive \
-    TZ=${TZ:-Europe/Kiev}
+    TZ=${TZ}
 
 # --- System deps & PHP extensions ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl unzip libpng-dev libjpeg-dev libpq-dev libxml2-dev libzip-dev \
     zlib1g-dev libicu-dev g++ cron vim postgresql-client libssl-dev openssh-client tzdata patch ca-certificates \
+    aspell graphviz ghostscript poppler-utils \
  && docker-php-ext-configure gd --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" gd intl zip opcache pgsql pdo_pgsql soap \
+ && docker-php-ext-install exif \
  && pecl install redis \
  && docker-php-ext-enable redis \
  && apt-get clean && rm -rf /var/lib/apt/lists/* \
@@ -27,19 +29,14 @@ RUN echo "max_input_vars = 5000" > /usr/local/etc/php/conf.d/99-max-input-vars.i
 RUN git config --global user.name "Moodle Docker" \
  && git config --global user.email "docker@moodle.local"
 
-# --- Apache config ---
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf \
- && a2enmod rewrite
-
-# --- Clone Moodle core ---
-RUN git clone -b "${MOODLE_VERSION}" https://github.com/moodle/moodle.git /var/www/html
-
-# --- Copy environment files ---
-COPY ./.env /config/.env
+# --- Copy environment defaults (example only) ---
 COPY ./.env.example /config/.env.example
 
 # --- Permissions & working dir ---
-RUN chown -R www-data:www-data /var/www/html
+RUN mkdir -p /var/www/html /var/moodledata \
+ && chown -R www-data:www-data /var/www/html /var/moodledata
+VOLUME ["/var/moodledata"]
+
 WORKDIR /var/www/html
 
 # --- Copy all runtime scripts ---
@@ -47,8 +44,8 @@ COPY ./scripts /scripts
 RUN chmod +x /scripts/*.sh && ln -sf /scripts/setup.sh /usr/local/bin/setup.sh
 
 # --- Optional PHP config inside image (can be overridden by volume) ---
-COPY ./config/php.ini /usr/local/etc/php/conf.d/php.ini
+COPY ./config/php/php.ini /usr/local/etc/php/conf.d/php.ini
 
-EXPOSE 80
-RUN php -v && apache2ctl -v
+EXPOSE 9000
+RUN php -v
 CMD ["/usr/local/bin/setup.sh"]

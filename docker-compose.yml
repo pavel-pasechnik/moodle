@@ -2,57 +2,111 @@ services:
   postgres:
     image: postgres:16
     restart: always
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=${PG_SHARED_BUFFERS:-256MB}"
+      - "-c"
+      - "work_mem=${PG_WORK_MEM:-16MB}"
+      - "-c"
+      - "maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-256MB}"
+      - "-c"
+      - "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-2GB}"
+      - "-c"
+      - "max_connections=${PG_MAX_CONNECTIONS:-200}"
+      - "-c"
+      - "wal_buffers=${PG_WAL_BUFFERS:-16MB}"
     environment:
-      POSTGRES_DB: ${MOODLE_DB_NAME}
-      POSTGRES_USER: ${MOODLE_DB_USER}
-      POSTGRES_PASSWORD: ${MOODLE_DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
     restart: always
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-    restart: always
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
+    command:
+      - "redis-server"
+      - "--save"
+      - ""
+      - "--appendonly"
+      - "${REDIS_APPENDONLY:-no}"
+      - "--maxmemory"
+      - "${REDIS_MAXMEMORY:-256mb}"
+      - "--maxmemory-policy"
+      - "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}"
+    volumes:
+      - redisdata:/data
 
   moodle:
-    build:
-      context: .
-      dockerfile: ./docker/Dockerfile
+    platform: linux/amd64
+    image: ${MOODLE_IMAGE}
     entrypoint: ["/usr/local/bin/setup.sh"]
     restart: always
     depends_on:
       - redis
-      - elasticsearch
-    ports:
-      - "8080:80"
-    environment:
-      MOODLE_DBTYPE: pgsql
-      MOODLE_DBHOST: ${MOODLE_DB_HOST}
-      MOODLE_DBNAME: ${MOODLE_DB_NAME}
-      MOODLE_DBUSER: ${MOODLE_DB_USER}
-      MOODLE_DBPASS: ${MOODLE_DB_PASS}
-      REDIS_HOST: redis
-      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
-      MOODLE_VERSION: 4.5.7
-      TZ: ${TZ}
+      - postgres
+    environment: &moodle_env
+      DB_TYPE: ${DB_TYPE:-pgsql}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TZ: ${MOODLE_TZ:-Europe/Kyiv}
+      MOODLE_DOMAIN: ${MOODLE_DOMAIN}
       MOODLE_URL: ${MOODLE_URL}
+      MOODLE_EXTRA_CONFIG_DIR: /config/moodle
     volumes:
+      - moodlehtml:/var/www/html
+      - moodledata:/var/moodledata
       - ~/.ssh:/root/.ssh:ro
-      - ./config/php.ini:/usr/local/etc/php/php.ini:ro
+      - ./config/php:/config/php:ro
+      - ./config/moodle:/config/moodle
+      - ./scripts:/scripts
       - ./scripts/setup.sh:/usr/local/bin/setup.sh
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
+
+  cron:
+    platform: linux/amd64
+    image: ${MOODLE_IMAGE}
+    depends_on:
+      - moodle
+      - postgres
+      - redis
+    restart: always
+    environment:
+      <<: *moodle_env
+    volumes:
+      - moodlehtml:/var/www/html
+      - moodledata:/var/moodledata
+      - ./config/php:/config/php:ro
+      - ./config/moodle:/config/moodle
+      - ./scripts:/scripts
+    entrypoint: ["/usr/local/bin/php","/scripts/run_cron.php"]
+
+  nginx:
+    image: nginx:stable
+    restart: always
+    depends_on:
+      - moodle
+    ports:
+      - "80:80"
+    environment:
+      MOODLE_DOMAIN: ${MOODLE_DOMAIN}
+    volumes:
+      - moodlehtml:/var/www/html:ro
+      - moodledata:/var/moodledata:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
 volumes:
   pgdata:
+  moodledata:
+  moodlehtml:
+  redisdata:
