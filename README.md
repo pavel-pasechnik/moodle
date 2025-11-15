@@ -5,15 +5,15 @@
 ![Nginx](https://img.shields.io/badge/Nginx-stable-009639?logo=nginx&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.4-336791?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?logo=redis&logoColor=white)
-![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.15-005571?logo=elasticsearch&logoColor=white)
 ![Moodle](https://img.shields.io/badge/Moodle-4.5.7+-F98012?logo=moodle&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## Available Tags
 
-- `dev` — development image with full debugging and auto-plugin installation
-- `prod` — optimized production-ready image with caching, OPcache, and production settings
-All images are built automatically via GitHub Actions.
+- `pasechnik/moodle_lts_images:4.5.7-lts-fpm` — current FPM LTS (default)
+- `pasechnik/moodle_lts_images:5.0.3-fpm` — feature branch with public directory
+- `pasechnik/moodle_lts_images:5.1.0-fpm` — latest generation with `publicroot`
+All tags are built automatically via GitHub Actions.
 
 ---
 
@@ -75,8 +75,8 @@ Cron tasks are orchestrated through `scripts/run_cron.php`, a PHP-CLI watchdog t
 ## Quick Start
 
 ```bash
-git clone https://github.com/pavel-pasechnik/moodle-docker.git
-cd moodle-docker
+git clone https://github.com/pavel-pasechnik/moodle.git
+cd moodle
 cp .env.example .env
 docker compose up -d
 ```
@@ -91,9 +91,8 @@ After installation, Moodle is available at:
 ```bash
 docker run -d \
   --name moodle \
-  -p 8080:8080 \
-  -e BUILD_MODE=prod \
-  pasechnik/moodle_lts_optimized_images:prod
+  -p 9000:9000 \
+  pasechnik/moodle_lts_images:4.5.7-lts-fpm
 ```
 
 ---
@@ -111,17 +110,14 @@ Set `MOODLE_IMAGE` in `.env` to one of the published tags:
 
 ---
 
-## Build Modes
+## Image Tags
 
-The image supports two build modes:
+Pull the tag that matches the Moodle version you want to run:
 
-- `dev` — enables verbose debugging, plugin auto-installation and fast rebuilds
-- `prod` — optimized for high performance, stable caching and production setups
-
-Select build mode using tags:
 ```bash
-docker pull pasechnik/moodle_lts_optimized_images:dev
-docker pull pasechnik/moodle_lts_optimized_images:prod
+docker pull pasechnik/moodle_lts_images:4.5.7-lts-fpm   # current LTS
+docker pull pasechnik/moodle_lts_images:5.0.3-fpm       # Moodle 5.0 testing
+docker pull pasechnik/moodle_lts_images:5.1.0-fpm       # latest generation with /publicroot
 ```
 
 ---
@@ -140,7 +136,7 @@ These directories are bind-mounted via `docker-compose.yml`, so they can also be
 ```yaml
 services:
   moodle:
-    image: pasechnik/moodle_lts_optimized_images:prod
+    image: pasechnik/moodle_lts_images:4.5.7-lts-fpm
     ports:
       - "80:8080"
     environment:
@@ -221,12 +217,5 @@ volumes:
 | ---------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | **Course Certificate** | [moodleworkplace/moodle-mod_coursecertificate](https://github.com/moodleworkplace/moodle-mod_coursecertificate) | Course certificates                  |
 | **Autonumber**         | [pavel-pasechnik/autonumber](https://github.com/pavel-pasechnik/autonumber)                                     | Automatic numbering for certificates |
-
----
-
-## Changelog
-
-Full release notes:  
-https://github.com/pavel-pasechnik/moodle/releases
 
 ---
