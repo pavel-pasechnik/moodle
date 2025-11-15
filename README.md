@@ -103,9 +103,9 @@ docker run -d \
 The Docker stack can launch multiple Moodle tracks without changing compose files.  
 Set `MOODLE_IMAGE` in `.env` to one of the published tags:
 
-- `pasechnik/moodle_lts_images:4.5.7-lts-fpm` — current LTS (default)
-- `pasechnik/moodle_lts_images:5.0.3` — feature branch with public directory
-- `pasechnik/moodle_lts_images:5.1.0` — latest generation with `publicroot`
+- `pasechnik/moodle_lts_images:4.5.7-lts-fpm` — current FPM LTS (default)
+- `pasechnik/moodle_lts_images:5.0.3-fpm` — feature branch with public directory
+- `pasechnik/moodle_lts_images:5.1.0-fpm` — latest generation with `publicroot`
 
 `setup.sh` detects whether `public/` or `publicroot/` exists and keeps the `/var/www/html/public_web` symlink updated so Nginx always serves the supported docroot for that release.
 
