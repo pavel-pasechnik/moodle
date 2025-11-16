@@ -24,10 +24,15 @@ while (!is_file($configPath)) {
 echo "✅ Moodle config detected. Cron loop starting.\n";
 
 while (true) {
+    $started = microtime(true);
     $cmd = escapeshellcmd($phpBinary) . ' ' . escapeshellarg($cronScript);
     passthru($cmd, $status);
     if ($status !== 0) {
         echo "⚠️  cron.php exited with status {$status}\n";
     }
-    sleep($interval);
+    $elapsed = (int)ceil(microtime(true) - $started);
+    $sleep = $interval - $elapsed;
+    if ($sleep > 0) {
+        sleep($sleep);
+    }
 }

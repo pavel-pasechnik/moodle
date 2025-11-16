@@ -430,10 +430,14 @@ ensure_rw_access /scripts www-data:www-data
 find /scripts -maxdepth 1 -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 
 # Fix permissions for config.php to ensure the web server can read it
-if [ -f /var/www/html/config.php ]; then
-  chown www-data:www-data /var/www/html/config.php
-  chmod 644 /var/www/html/config.php
-fi
+fix_config_permissions() {
+  if [ -f /var/www/html/config.php ]; then
+    chown root:www-data /var/www/html/config.php
+    chmod 640 /var/www/html/config.php
+  fi
+}
+
+fix_config_permissions
 
 if [ ! -f /var/www/html/config.php ]; then
   echo "⚠️  Moodle config.php not found — Moodle may not be initialized yet."
