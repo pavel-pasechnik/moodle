@@ -25,13 +25,28 @@ echo "✅ Moodle config detected. Cron loop starting.\n";
 
 while (true) {
     $started = microtime(true);
-    $cmd = escapeshellcmd($phpBinary) . ' ' . escapeshellarg($cronScript);
-    passthru($cmd, $status);
+    $cmd = escapeshellcmd($phpBinary) . ' ' . escapeshellarg($cronScript) . ' 2>&1';
+    $output = [];
+    exec($cmd, $output, $status);
+    $outputText = trim(implode(PHP_EOL, $output));
+    if ($outputText !== '') {
+        echo $outputText . PHP_EOL;
+    }
+    $upgradeInProgress = str_contains($outputText, 'Site is being upgraded') ||
+        str_contains($outputText, 'Сайт обновляется');
     if ($status !== 0) {
         echo "⚠️  cron.php exited with status {$status}\n";
+        if ($upgradeInProgress) {
+            echo "ℹ️  Detected upgrade in progress; waiting longer before retrying.\n";
+        }
+    } else {
+        echo "✅ Cron finished successfully at " . date('c') . PHP_EOL;
     }
     $elapsed = (int)ceil(microtime(true) - $started);
     $sleep = $interval - $elapsed;
+    if ($upgradeInProgress && $sleep < $interval) {
+        $sleep = $interval;
+    }
     if ($sleep > 0) {
         sleep($sleep);
     }

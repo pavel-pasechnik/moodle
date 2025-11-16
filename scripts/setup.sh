@@ -131,6 +131,7 @@ bootstrap_moodle_core() {
   local moodle_dir="/var/www/html"
   local image_moodle_dir="/var/www/moodle"
   local source="${MOODLE_REPO_URL:-}"
+  local cleanup_image_copy="${CLEANUP_IMAGE_MOODLE_COPY:-1}"
 
   if [ -f "$moodle_dir/admin/cli/install.php" ]; then
     echo "✅ Moodle core detected under $moodle_dir"
@@ -151,6 +152,11 @@ bootstrap_moodle_core() {
     echo "📦  Copying prebuilt Moodle from ${image_moodle_dir}"
     cp -a "$image_moodle_dir/." "$moodle_dir/"
     chown -R www-data:www-data "$moodle_dir"
+
+    if [ "$cleanup_image_copy" = "1" ] && [ "$image_moodle_dir" != "$moodle_dir" ]; then
+      echo "🧹  Removing image copy at ${image_moodle_dir} to avoid duplicate trees"
+      rm -rf "$image_moodle_dir"
+    fi
     return
   fi
 
