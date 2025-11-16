@@ -18,11 +18,20 @@ WEB_PUBLIC_LINK=${WEB_PUBLIC_LINK:-/var/www/html/public_web}
 MOODLE_HTML_DIR=${MOODLE_HTML_DIR:-/var/www/html}
 MOODLE_DATA_DIR=${MOODLE_DATA_DIR:-/var/moodledata}
 
-# Load environment variables from .env if present (prefer /config/.env inside image)
+# Load environment variables from .env if present (prefer /config/.env inside image).
+load_env_file() {
+  local envfile="$1"
+  [ -f "$envfile" ] || return
+  set -a
+  # shellcheck disable=SC1090
+  . "$envfile"
+  set +a
+}
+
 if [ -f "/config/.env" ]; then
-  export $(grep -v '^#' /config/.env | xargs)
+  load_env_file "/config/.env"
 elif [ -f ".env" ]; then
-  export $(grep -v '^#' .env | xargs)
+  load_env_file ".env"
 fi
 
 DEFAULT_DB_TYPE=${DB_TYPE:-${MOODLE_DB_TYPE:-pgsql}}

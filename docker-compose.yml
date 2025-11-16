@@ -66,6 +66,7 @@ services:
     volumes:
       - moodlehtml:/var/www/html
       - moodledata:/var/moodledata
+      - ./.env:/config/.env:ro
       - ~/.ssh:/root/.ssh:ro
       - ./config/php:/config/php:ro
       - ./config/moodle:/config/moodle
@@ -85,6 +86,7 @@ services:
     volumes:
       - moodlehtml:/var/www/html
       - moodledata:/var/moodledata
+      - ./.env:/config/.env:ro
       - ./config/php:/config/php:ro
       - ./config/moodle:/config/moodle
       - ./scripts:/scripts

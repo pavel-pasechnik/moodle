@@ -48,12 +48,16 @@ All Dockerfiles, scripts, and compose configurations for this stack live in [pav
 
 | Parameter              | Value | Description                        |
 | ---------------------- | :---: | ---------------------------------- |
-| `max_input_vars`       | 5000  | Moodle requirement for large forms |
-| `memory_limit`         | 512M  | Optimal value for courses          |
-| `upload_max_filesize`  |  50M  | Maximum upload file size           |
-| `opcache.enable`       |   1   | Speeds up PHP page loading         |
-| `session.save_handler` | redis | Sessions via Redis                 |
-| `redis.host`           | redis | Caching                            |
+| `max_input_vars`       | 5000  | Moodle requirement for large forms             |
+| `memory_limit`         | 512M  | Optimal value for typical course workloads     |
+| `upload_max_filesize`  |  50M  | Maximum upload file size                       |
+| `max_execution_time`   | 300s  | Leaves room for heavy imports/cron hooks       |
+| `opcache.enable`       |   1   | Speeds up PHP page loading                     |
+| `session.save_handler` | redis | Sessions via Redis                             |
+| `redis.host`           | redis | Caching                                        |
+| `request_slowlog_timeout` | 0 | Slowlog disabled to avoid ptrace warnings in containers |
+
+The bundled PHP-FPM pool is tuned for a 2 vCPU / 2 GB RAM host: `pm.max_children=12`, `pm.start_servers=6`, `pm.min_spare_servers=3`, `pm.max_spare_servers=9`, `pm.max_requests=200`, and `slowlog` is disabled so long-running UI posts do not block on ptrace.
 
 ---
 
@@ -64,6 +68,8 @@ All Dockerfiles, scripts, and compose configurations for this stack live in [pav
 | **Redis Cache**               | Session, Locking, MUC                                | Improves concurrency, speeds up page loads and cron execution |
 | **PostgreSQL**                | Optimized transactional engine                       | Ensures data integrity and efficient parallel processing      |
 | **Elasticsearch**             | Full-text search backend                             | Speeds up course, forum, and resource searches                |
+| **PHP-FPM pool**              | 12 workers, tuned spare servers, slowlog off         | Keeps UI responsive on 2 vCPU/2 GB hosts without ptrace noise |
+| **Task queue guard**          | `task_*_concurrency_limit = 1` via `config/moodle/10-performance.php` | Heavy cron/adhoc jobs are serialized for low-RAM nodes        |
 | **Docker Healthcheck**        | Waits for PostgreSQL to be ready before Moodle setup | Prevents early initialization failures                        |
 | **Layer Cleanup**             | `apt-get clean && rm -rf /var/lib/apt/lists/*`       | Reduces final image size                                      |
 | **Persistent Volumes**        | `/var/www/html` (code) + `/var/moodledata` (files)   | Lets you move user files elsewhere (e.g. Google Workspace)    |
@@ -171,6 +177,7 @@ volumes:
 ## Environment Hints
 
 - `DB_TYPE`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` are read by the setup script and entrypoint. Adjust them in `.env` (or via `EXTERNAL_DB_*` overrides for `docker-compose.prod-ext.yml`) to point Moodle at any PostgreSQL/MySQL instance.
+- The root `.env` is bind-mounted into every container as `/config/.env`, and `scripts/setup.sh` sources it automatically, so runtime bootstrap always uses the exact values you keep under version control.
 - `MOODLE_IMAGE` selects which Moodle version to boot (4.5.7 LTS, 5.0.3, 5.1.0). Change it in `.env`, run `docker compose pull`, and restart the stack to test another track without editing compose files.
 - `ENABLE_REDIS_SESSION` together with the `REDIS_*` variables matches the tuning expected by `docker/moodle-entrypoint.sh` (timeouts, locking, pooling). Tweak these values to align with external Redis deployments without rebuilding the image.
 - `REDIS_MAXMEMORY`, `REDIS_MAXMEMORY_POLICY`, and `REDIS_APPENDONLY` are passed directly to `redis-server`, so cache size/policy changes just require tweaking `.env` and restarting the container.
@@ -216,6 +223,6 @@ volumes:
 | **Course Certificate**             | [moodleworkplace/moodle-mod_coursecertificate](https://github.com/moodleworkplace/moodle-mod_coursecertificate/releases/tag/v4.5.7)           | Adds the Course certificate activity type        |
 | **Certificate Autonumber Element** | [pavel-pasechnik/certificateelement_autonumber](https://github.com/pavel-pasechnik/certificateelement_autonumber/releases/tag/v1.0.15)        | Auto-generates unique certificate numbers        |
 | **Certificate "Certificat" Element** | [pavel-pasechnik/certificateelement_certificat](https://github.com/pavel-pasechnik/certificateelement_certificat/releases/tag/v1.0.4)         | Provides a branded visual element for templates  |
-| **Certificate Import (local)**     | [pavel-pasechnik/local_certificateimport](https://github.com/pavel-pasechnik/local_certificateimport/releases/tag/v1.0.13)                    | Imports certificate templates/settings from file |
+| **Certificate Import (local)**     | [pavel-pasechnik/local_certificateimport](https://github.com/pavel-pasechnik/local_certificateimport/releases/tag/v1.0.15)                    | Imports certificate templates/settings from file |
 
 ---
