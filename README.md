@@ -19,7 +19,7 @@ This tag is built automatically via GitHub Actions and always reflects the lates
 ## Description
 
 Fully automated Docker image for **Moodle 4.5.7+**,  
-including optimizations for PHP, Redis, PostgreSQL, Elasticsearch,  
+including optimizations for PHP, Redis, PostgreSQL, optional Elasticsearch,  
 and external plugins installed during the image build.
 
 ---
@@ -38,7 +38,7 @@ All Dockerfiles, scripts, and compose configurations for this stack live in [pav
 | **Nginx**         |    stable      | Reverse proxy serving Moodle over FastCGI                                                  |
 | **PostgreSQL**    |      16.4       | Primary database                                                                            |
 | **Redis**         |       7.2       | Cache and session manager                                                                   |
-| **Elasticsearch** |      8.15       | Full-text search for Moodle                                                                 |
+| **Elasticsearch** |   optional      | Bring-your-own (disabled by default)                                                        |
 | **Moodle**        |     4.5.7+      | Core LMS                                                                                    |
 | **OS**            | Debian Bookworm | Base PHP-FPM image                                                                          |
 
@@ -67,7 +67,7 @@ The bundled PHP-FPM pool is tuned for a 2 vCPU / 2 GB RAM host: `pm.max_children
 | ----------------------------- | ---------------------------------------------------- | ------------------------------------------------------------- |
 | **Redis Cache**               | Session, Locking, MUC                                | Improves concurrency, speeds up page loads and cron execution |
 | **PostgreSQL**                | Optimized transactional engine                       | Ensures data integrity and efficient parallel processing      |
-| **Elasticsearch**             | Full-text search backend                             | Speeds up course, forum, and resource searches                |
+| **Elasticsearch**             | Optional bring-your-own backend                      | Integrate only if you deploy an external cluster              |
 | **PHP-FPM pool**              | 12 workers, tuned spare servers, slowlog off         | Keeps UI responsive on 2 vCPU/2 GB hosts without ptrace noise |
 | **Task queue guard**          | `task_*_concurrency_limit = 1` via `config/moodle/10-performance.php` | Heavy cron/adhoc jobs are serialized for low-RAM nodes        |
 | **Docker Healthcheck**        | Waits for PostgreSQL to be ready before Moodle setup | Prevents early initialization failures                        |
