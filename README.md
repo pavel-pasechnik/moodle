@@ -1,7 +1,7 @@
 # Moodle 4.5.7+ Docker Stack
 
 ![Docker](https://img.shields.io/badge/Docker-✓-2496ED?logo=docker&logoColor=white)
-![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.1-777BB4?logo=php&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-stable-009639?logo=nginx&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.4-336791?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?logo=redis&logoColor=white)
@@ -34,7 +34,7 @@ All Dockerfiles, scripts, and compose configurations for this stack live in [pav
 
 | Component         |     Version     | Purpose                                                                                     |
 | ----------------- | :-------------: | ------------------------------------------------------------------------------------------- |
-| **PHP-FPM**       |       8.3       | Web interpreter with support for `gd`, `intl`, `soap`, `redis`, `pgsql`, `pdo_pgsql`, `zip` |
+| **PHP-FPM**       |       8.1       | Web interpreter with support for `gd`, `intl`, `soap`, `redis`, `pgsql`, `pdo_pgsql`, `zip` |
 | **Nginx**         |    stable      | Reverse proxy serving Moodle over FastCGI                                                  |
 | **PostgreSQL**    |      16.4       | Primary database                                                                            |
 | **Redis**         |       7.2       | Cache and session manager                                                                   |
